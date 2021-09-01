@@ -1,6 +1,27 @@
 // library stuff
 #include <SPI.h>
 
+class PixelCommand
+{
+public:
+  PixelCommand(const int16_t x, const int16_t y) :
+  _x(x), _y(y) {}
+
+  static uint8_t process(void* command, const uint8_t input, const int16_t x, const int16_t y)
+  {
+    PixelCommand* pc = (PixelCommand*)command;
+
+    if (pc->_x == x && pc->_y == y)
+      return input & ~(1 << (7 - (x % 8)));
+
+    return input;
+  }
+
+  static constexpr size_t size() { return sizeof(PixelCommand); }
+private:
+  const int16_t _x, _y;
+};
+
 class LineCommand
 {
 public:
@@ -62,6 +83,29 @@ public:
   static constexpr size_t size() { return sizeof(RectCommand); }
 private:
   LineCommand commands[4];
+};
+
+class CircleCommand
+{
+public:
+  CircleCommand(const int16_t x, const int16_t y, const int16_t r) :
+  _x(x), _y(y), radius(r) {}
+
+  static uint8_t process(void* command, const uint8_t input, const int16_t x, const int16_t y)
+  {
+    CircleCommand* cc = (CircleCommand*)command;
+
+    const uint32_t dist = (x - cc->_x) * (x - cc->_x) + (y - cc->_y) * (y - cc->_y);
+    if (cc->radius == static_cast<uint32_t>(sqrt(dist) + 0.5))
+      return input & ~(1 << (7 - (x % 8)));
+
+    return input;
+  }
+
+  static constexpr size_t size() { return sizeof(CircleCommand); }
+private:
+  const int16_t _x, _y;
+  const int16_t radius;
 };
 
 class CommandBufferInternal
@@ -393,11 +437,13 @@ void setup()
   epd.init();
 
   Serial.println("render");
+
   CommandBuffer<5, RectCommand::size()> buffer;
   buffer.push<LineCommand>(LineCommand(10, 10, 20, 10));
   buffer.push<LineCommand>(LineCommand(20, 10, 20, 20));
   buffer.push<RectCommand>(RectCommand(50, 50, 20, 20));
-  Serial.println(buffer.size());
+  buffer.push<PixelCommand>(PixelCommand(50, 150));
+  buffer.push<CircleCommand>(CircleCommand(50, 150, 20));
   epd.render_buffer(buffer);
 }
 
