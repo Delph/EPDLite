@@ -1,49 +1,118 @@
 // library stuff
 #include <SPI.h>
 
-class Command
-{
-  virtual uint8_t process(const uint8_t input, const int16_t x, const int16_t y) = 0;
-};
-
-class LineCommand : public Command
+class LineCommand
 {
 public:
   LineCommand(const int16_t x0, const int16_t y0, const int16_t x1, const int16_t y1) :
-  _x0(x0), _y0(y0), _x1(x1), _y1(y1) {};
+  _x0(x0), _y0(y0), _x1(x1), _y1(y1) {}
 
-  virtual uint8_t process(const uint8_t input, const int16_t x, const int16_t y) override
+  static uint8_t process(void* command, const uint8_t input, const int16_t x, const int16_t y)
   {
+    LineCommand* lc = (LineCommand*)command;
     // horizontal line
-    if (_y0 == _y1)
+    if (lc->_y0 == lc->_y1 && lc->_y0 == y)
     {
-      if (x / 8 == _x0 / 8)
-        return input | (0xff - (0xff >> 8 - (_x0 % 8)));
-      else if (x / 8 == _x1 / 8)
-        return input | (0xff >> (8 - x1 % 8));
-      else
-        return 0x00;
+      if (x < lc->_x0)
+        return input;
+      else if (x > lc->_x1)
+        return input;
+
+      return input & ~(1 << (7 - (x % 8)));
     }
     // vertical line
-    else if (_x0 == _x1)
+    else if (lc->_x0 == lc->_x1 && lc->_x0 == x)
     {
+      if (y < lc->_y0)
+        return input;
+      if (y > lc->_y1)
+        return input;
+
+      return input & ~(1 << (7 - (x % 8)));
     }
+
+    return input;
   }
 
+  static constexpr size_t size() { return sizeof(LineCommand); }
 private:
   const int16_t _x0, _y0, _x1, _y1;
 };
 
-template <size_t TCommandCount>
-class CommandBuffer
+class RectCommand
 {
 public:
-  CommandBuffer() {}
+  RectCommand(const int16_t x, const int16_t y, const int16_t width, const int16_t height) : commands{
+    LineCommand(x, y, x+width, y),
+    LineCommand(x+width, y, x+width, y+height),
+    LineCommand(x, y+height, x+width, y+height),
+    LineCommand(x, y, x, y+height)
+  } {}
 
-  Command commands[TCommandCount];
+  static uint8_t process(void* command, const uint8_t input, const int16_t x, const int16_t y)
+  {
+    RectCommand* rc = (RectCommand*)command;
+
+    uint8_t d = input;
+    for (uint8_t i = 0; i < 4; ++i)
+      d = LineCommand::process(&(rc->commands[i]), d, x, y);
+    return d;
+  }
+
+  static constexpr size_t size() { return sizeof(RectCommand); }
 private:
+  LineCommand commands[4];
 };
 
+class CommandBufferInternal
+{
+public:
+  CommandBufferInternal() {}
+
+  virtual size_t size() const;
+  virtual size_t capacity() const;
+
+  virtual void pop() = 0;
+
+  virtual uint8_t process(const size_t at, const uint8_t input, const int16_t x, const int16_t y) = 0;
+};
+
+template <size_t TCommandCount, size_t TCommandSize>
+class CommandBuffer : public CommandBufferInternal
+{
+public:
+  CommandBuffer() : CommandBufferInternal(), count(0)
+  {
+  }
+
+  virtual size_t size() const { return count; }
+  virtual size_t capacity() const { return TCommandCount; }
+
+  template <typename TCommand>
+  void push(TCommand command)
+  {
+    static_assert(sizeof(TCommand) <= TCommandSize);
+    memcpy(&commands[TCommandSize * count], &command, sizeof(TCommand));
+    call_table[count++] = &TCommand::process;
+  }
+
+  virtual void pop()
+  {
+    if (count > 0)
+      --count;
+  }
+
+  virtual uint8_t process(const size_t at, const uint8_t input, const int16_t x, const int16_t y) override
+  {
+    return (call_table[at])((void*)&commands[at * TCommandSize], input, x, y);
+  }
+
+private:
+  uint8_t (*call_table[TCommandCount])(void* command, const uint8_t input, const int16_t x, const int16_t y);
+
+  uint8_t commands[TCommandCount * TCommandSize];
+  size_t count;
+};
 
 
 using pin_t =  int8_t;
@@ -61,7 +130,7 @@ public:
   void block();
 
   void render();
-  void render_buffer(CommandBuffer* const buffer);
+  void render_buffer(CommandBufferInternal& buffer);
   void clear();
 
 
@@ -195,9 +264,10 @@ void EPD::render()
 
   Serial.println("display update sequence");
   command(DISPLAY_UPDATE_SEQUENCE);
+  block();
 }
 
-void EPD::render_buffer(CommandBuffer* const buffer)
+void EPD::render_buffer(CommandBufferInternal& buffer)
 {
   command(WRITE_RAM);
 
@@ -207,17 +277,23 @@ void EPD::render_buffer(CommandBuffer* const buffer)
 
   for (int16_t y = 0; y < height; ++y)
   {
-    for (int16_t x = 0; x < width; ++x)
+    for (int16_t x = 0; x < width; x += 8)
     {
       uint8_t data = 0xff;
-      for (Command& command : buffer.getCommands())
-        data = command.process(data, x, y);
+      for (int16_t xi = 0; xi < 8; ++xi)
+      {
+        for (size_t i = 0; i < buffer.size(); ++i)
+          data = buffer.process(i, data, x + xi, y);
+      }
       SPI.transfer(data);
     }
   }
 
   digitalWrite(pin_cs, 1);
   SPI.endTransaction();
+
+  command(DISPLAY_UPDATE_SEQUENCE);
+  block();
 }
 
 void EPD::clear()
@@ -317,7 +393,12 @@ void setup()
   epd.init();
 
   Serial.println("render");
-  epd.render();
+  CommandBuffer<5, RectCommand::size()> buffer;
+  buffer.push<LineCommand>(LineCommand(10, 10, 20, 10));
+  buffer.push<LineCommand>(LineCommand(20, 10, 20, 20));
+  buffer.push<RectCommand>(RectCommand(50, 50, 20, 20));
+  Serial.println(buffer.size());
+  epd.render_buffer(buffer);
 }
 
 void loop()
