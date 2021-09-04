@@ -2,7 +2,6 @@
 
 #include <EPDLite/fonts/font3x5.h>
 
-// my stuff
 const uint8_t EPD_CS = 4;
 const uint8_t EPD_DC = 5;
 const uint8_t EPD_BUSY = 6;
@@ -12,11 +11,7 @@ EPDLite epd(152, 296, EPD_CS, EPD_DC, EPD_BUSY, EPD_RST);
 
 void setup()
 {
-  Serial.begin(9600);
-  Serial.println("init");
   epd.init();
-
-  Serial.println("render");
 
   CommandBuffer<10, CommandBufferInterface::max_size()> buffer;
   buffer.push(LineCommand(10, 10, 20, 10));
