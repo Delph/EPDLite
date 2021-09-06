@@ -120,7 +120,6 @@ public:
     return d;
   }
 
-  static constexpr size_t size() { return sizeof(RectCommand); }
 private:
   LineCommand commands[4];
 };
@@ -152,7 +151,6 @@ public:
     return input;
   }
 
-  static constexpr size_t size() { return sizeof(CircleCommand); }
 private:
   const int16_t _x, _y;
   const int16_t radius;
@@ -197,6 +195,7 @@ public:
 
     return input;
   }
+
 private:
   const int16_t _x, _y;
   const char* const txt;
