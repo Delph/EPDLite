@@ -9,6 +9,8 @@
 #ifndef EPDLITE_COMMANDS_H_INCLUDE
 #define EPDLITE_COMMANDS_H_INCLUDE
 
+#include "font.h"
+
 /**
  * @brief Draws a single pixel onto the display
  *
@@ -170,7 +172,7 @@ public:
    * @param text The text to draw
    * @param font The font to use
    */
-  TextCommand(const int16_t x, const int16_t y, const char* const text, const uint8_t* font) :
+  TextCommand(const int16_t x, const int16_t y, const char* const text, const Font& font) :
   _x(x), _y(y), txt(text), fnt(font)
   {
     offx = 0;
@@ -184,11 +186,11 @@ public:
 
     if (x == tc->_x + tc->offx && y == tc->_y + tc->offy && tc->index < strlen(tc->txt))
     {
-      const uint8_t glyph_slice = pgm_read_byte(&(tc->fnt[tc->txt[tc->index - 32] + tc->offy % 3]));
+      const uint8_t glyph_slice = pgm_read_byte(&(tc->fnt.charmap[tc->txt[tc->index - fnt.offset] + tc->offy % font.width]));
 
       const uint8_t data = input & ~glyph_slice;
       ++tc->offy;
-      if (tc->offy % 3 == 0)
+      if (tc->offy % font.width == 0)
         ++tc->index;
       return data;
     }
@@ -199,7 +201,7 @@ public:
 private:
   const int16_t _x, _y;
   const char* const txt;
-  const uint8_t* fnt;
+  const Font& fnt;
 
   int16_t offx, offy;
   size_t index;

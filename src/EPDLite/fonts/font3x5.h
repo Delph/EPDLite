@@ -1,8 +1,10 @@
-#ifndef FONT_3X5_H_INCLUDE
-#define FONT_3X5_H_INCLUDE
+#ifndef EPDLITE_FONT_3X5_H_INCLUDE
+#define EPDLITE_FONT_3X5_H_INCLUDE
 
 #include <avr/io.h>
 #include <avr/pgmspace.h>
+
+#include "../font.h"
 
 const uint8_t font3x5[96 * 3] PROGMEM = {
   0x00,0x00,0x00, //
@@ -101,6 +103,13 @@ const uint8_t font3x5[96 * 3] PROGMEM = {
   0x22,0x3e,0x08, // }
   0x02,0x06,0x04, // ~
   0x00,0x00,0x00
+};
+
+static Font font5x3 = {
+  font5x3_data,
+  3,
+  96,
+  20
 };
 
 #endif
