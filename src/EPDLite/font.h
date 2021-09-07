@@ -14,7 +14,7 @@ struct Font
   {}
 
   const uint8_t* const charmap;
-  const size_t offset;
+  const size_t mapoffset;
   const size_t maplength;
 
   const int16_t charwidth;

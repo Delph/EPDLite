@@ -134,7 +134,7 @@ void EPDLite::render_P(const uint8_t* const buffer)
   for (int16_t y = 0; y < height; ++y)
   {
     for (int16_t x = 0; x < width; x += 8)
-      SPI.transfer(pgm_read_byte(buffer[y * width / 8 + width / 8]));
+      SPI.transfer(pgm_read_byte(&(buffer[y * width / 8 + width / 8])));
   }
 
   digitalWrite(pin_cs, 1);
