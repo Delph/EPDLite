@@ -1,7 +1,8 @@
 # EPDLite
 A small, simple, and lightweight ePaper display library for Arduino. Suitable for low memory microcontrollers such as the Arduino Uno/Nano (ATmega328) and ATtiny series which don't have enough RAM to store an entire screen buffer.
 
-## Wiring
+## Basic Example
+### Wiring
 * VCC to 3v3 or 5v -- **warning**: some displays aren't 5v tolerant, some are. Check with your vendor first
 * GND to GND
 * DIN to your microcontroller's MOSI pin (D11 or ICSP-4)
@@ -12,8 +13,7 @@ A small, simple, and lightweight ePaper display library for Arduino. Suitable fo
 * BUSY to any digital pin
 
 
-## Usage
-
+### Code
 ```cpp
 #include <EPDLite.h>
 
@@ -33,7 +33,7 @@ void setup()
   epd.init();
 
   // create a command buffer to store five commands
-  CommandBuffer<5, CommandBufferInterface::max_size()> buffer;
+  CommandBuffer<5> buffer;
 
   // push some commands into our buffer
   buffer.push(LineCommand(10, 10, 20, 10));
@@ -50,6 +50,51 @@ void loop()
 {
   // nothing to do here
 }
+```
+
+## Brief API overview
+Full documentation is available **here**.
+
+### Setup
+`EPDLite.h` is the header to include. Fonts are availabale from `EPDLite/fonts/<fontname>.h`.
+
+Use an instance of `EPDLite` to control an ePaper display.
+```
+EPDLite epd(width, height, pin_chip_select, pin_data_command, pin_busy, pin_reset);
+```
+`width` and `height` are the screen sizes in pixels. All pins are required.
+
+Initialise the display (in `setup()` or wherever appropriate).
+```
+epd.begin();
+```
+
+### Buffered rendering (high memory usage)
+Render from a buffer (high memory use).
+```cpp
+uint8_t buffer[width / 8 * height] = {...};
+epd.render(buffer);
+```
+Render a buffer from RAM. Beware this requires a 5,624 byte buffer for a 152 by 296px display.
+Good for rendering intricate displays or images.
+Each byte in the buffer holds data for eight pixels.
+
+### Command rendering (low memory usage)
+Create a command buffer
+```cpp
+CommandBuffer<5> buffer;
+```
+CommandBuffer stores a list of drawing commands to perform, such as lines, rectangles, and text. The first argument within the `<>` is the maximum number of commands that can be stored in the buffer.
+
+Add commands to the buffer with `push()`
+```cpp
+buffer.push(LineCommand(x0, y0, x1, y1));
+buffer.push(RectCommand(x, y , w, h));
+```
+
+Then render the command list;
+```cpp
+epd.render(buffer);
 ```
 
 
