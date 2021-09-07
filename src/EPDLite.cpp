@@ -121,6 +121,29 @@ void EPDLite::render(const uint8_t* const buffer)
   block();
 }
 
+void EPDLite::render_P(const uint8_t* const buffer)
+{
+  place(0, 0);
+
+  command(WRITE_RAM);
+
+  SPI.beginTransaction(settings);
+  digitalWrite(pin_dc, 1);
+  digitalWrite(pin_cs, 0);
+
+  for (int16_t y = 0; y < height; ++y)
+  {
+    for (int16_t x = 0; x < width; x += 8)
+      SPI.transfer(pgm_read_byte(buffer[y * width / 8 + width / 8]));
+  }
+
+  digitalWrite(pin_cs, 1);
+  SPI.endTransaction();
+
+  command(DISPLAY_UPDATE_SEQUENCE);
+  block();
+}
+
 void EPDLite::clear()
 {
   place(0, 0);

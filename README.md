@@ -70,7 +70,7 @@ epd.begin();
 ```
 
 ### Buffered rendering (high memory usage)
-Render from a buffer (high memory use).
+Render from a RAM buffer
 ```cpp
 uint8_t buffer[width / 8 * height] = {...};
 epd.render(buffer);
@@ -78,6 +78,13 @@ epd.render(buffer);
 Render a buffer from RAM. Beware this requires a 5,624 byte buffer for a 152 by 296px display.
 Good for rendering intricate displays or images.
 Each byte in the buffer holds data for eight pixels.
+
+Render from a PROGMEM buffer
+```cpp
+uint8_t buffer[width / 8 * height] PROGMEM = {...};
+epd.render_P(buffer);
+```
+Render a buffer from PROGMEM. This still requires 5,624 bytes to store the data, but the data can be stored in FLASH instead of RAM, reducing the memory requirement at the cost of being read only. Good for rendering hard coded images.
 
 ### Command rendering (low memory usage)
 Create a command buffer

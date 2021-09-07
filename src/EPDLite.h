@@ -205,6 +205,14 @@ public:
   void render(const uint8_t* const buffer);
 
   /**
+   * @brief Render to the display from a buffer storee in PROGMEM
+   * @details Rendering using a full memory buffer from flash. The buffer must be big enough to store an entire image.
+   *
+   * @param buffer The buffer in PROGMEM
+   */
+  void render_P(const uint8_t* const buffer);
+
+  /**
    * @brief Blanks the display
    */
   void clear();
