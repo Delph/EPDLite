@@ -186,11 +186,11 @@ public:
 
     if (x == tc->_x + tc->offx && y == tc->_y + tc->offy && tc->index < strlen(tc->txt))
     {
-      const uint8_t glyph_slice = pgm_read_byte(&(tc->fnt.charmap[tc->txt[tc->index - fnt.offset] + tc->offy % font.charwidth]));
+      const uint8_t glyph_slice = pgm_read_byte(&(tc->fnt.charmap[tc->txt[tc->index - tc->fnt.offset] + tc->offy % tc->fnt.charwidth]));
 
       const uint8_t data = input & ~glyph_slice;
       ++tc->offy;
-      if (tc->offy % font.charwidth == 0)
+      if (tc->offy % tc->fnt.charwidth == 0)
         ++tc->index;
       return data;
     }
