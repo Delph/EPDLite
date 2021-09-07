@@ -6,7 +6,7 @@
 
 #include "../font.h"
 
-const uint8_t font3x5[96 * 3] PROGMEM = {
+const uint8_t font3x5_data[96 * 3] PROGMEM = {
   0x00,0x00,0x00, //
   0x00,0x2e,0x00, // !
   0x06,0x00,0x06, // "
@@ -109,7 +109,7 @@ static Font font5x3 = {
   font5x3_data,
   3,
   96,
-  20
+  32
 };
 
 #endif
