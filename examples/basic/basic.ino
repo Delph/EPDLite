@@ -13,7 +13,7 @@ void setup()
 {
   epd.init();
 
-  CommandBuffer<10, CommandBufferInterface::max_size()> buffer;
+  CommandBuffer<10> buffer;
   buffer.push(LineCommand(10, 10, 20, 10));
   buffer.push(LineCommand(20, 10, 20, 20));
   buffer.push(RectCommand(50, 50, 20, 20));

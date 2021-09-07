@@ -84,7 +84,7 @@ private:
  * @tparam TCommandCount The maximum number of commands allowed in this buffer.
  * @tparam TCommandSize The maximum size of a command allowed in this buffer. Suggested to use MAX_COMMAND_SIZE, but smaller values can be used for memory reduction.
  */
-template <size_t TCommandCount, size_t TCommandSize>
+template <size_t TCommandCount, size_t TCommandSize = CommandBufferInterface::max_size()>
 class CommandBuffer : public CommandBufferInterface
 {
 public:
