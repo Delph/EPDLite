@@ -59,13 +59,13 @@ Full documentation is available **here**.
 `EPDLite.h` is the header to include. Fonts are availabale from `EPDLite/fonts/<fontname>.h`.
 
 Use an instance of `EPDLite` to control an ePaper display.
-```
+```cpp
 EPDLite epd(width, height, pin_chip_select, pin_data_command, pin_busy, pin_reset);
 ```
 `width` and `height` are the screen sizes in pixels. All pins are required.
 
 Initialise the display (in `setup()` or wherever appropriate).
-```
+```cpp
 epd.begin();
 ```
 
