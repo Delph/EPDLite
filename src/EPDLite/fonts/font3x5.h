@@ -105,8 +105,8 @@ const uint8_t font3x5_data[96 * 3] PROGMEM = {
   0x00,0x00,0x00
 };
 
-static Font font5x3 = {
-  font5x3_data,
+static Font font3x5 = {
+  font3x5_data,
   3,
   96,
   32
