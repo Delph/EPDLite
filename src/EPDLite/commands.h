@@ -9,14 +9,7 @@
 #ifndef EPDLITE_COMMANDS_H_INCLUDE
 #define EPDLITE_COMMANDS_H_INCLUDE
 
-#define EPDLITE_CUSTOM_FONT_IMPLEMENTATION
-#ifndef EPDLITE_CUSTOM_FONT_IMPLEMENTATION
-#include "gfxfont.h"
-#include <avr/io.h>
-#include <avr/pgmspace.h>
-#else
 #include "font.h"
-#endif
 
 
 /**
@@ -166,88 +159,7 @@ private:
   const int16_t radius;
 };
 
-#ifndef EPDLITE_CUSTOM_FONT_IMPLEMENTATION
-/**
- * @brief Draws some text
- */
-class TextCommand
-{
-public:
-  /**
-   * @brief Draws some text
-   *
-   * @param x X position of the start of the text
-   * @param y Y position of the start of the text
-   * @param text The text to draw
-   * @param font The font to use
-   */
-  TextCommand(const int16_t x, const int16_t y, const char* const text, const GFXfont& f) :
-  _x(x), _y(y), txt(text), font(f)
-  {
-    cursorx = 0;
-    cursory = 0;
-    gindex = 0;
-    index = 0;
-  }
 
-  static uint8_t process(void* command, const uint8_t input, const int16_t x, const int16_t y)
-  {
-    TextCommand* tc = (TextCommand*)command;
-
-    // we've already written everything
-    if (tc->index >= strlen(tc->txt))
-      return input;
-
-    uint8_t data = input;
-    const char c = tc->txt[tc->index];
-    const GFXfont& font = tc->font;
-
-    const char first = pgm_read_byte(&(font.first));
-    const char last = pgm_read_byte(&(font.last));
-    if (c >= first && c <= last)
-    {
-      const uint8_t c2 = c - first;
-      GFXglyph* glyph = &(((GFXglyph*)pgm_read_ptr(&(font.glyph)))[c2]);
-      const uint8_t w = pgm_read_byte(&glyph->width);
-      const uint8_t h = pgm_read_byte(&glyph->height);
-
-      if (w > 0 && h > 0)
-      {
-        const int16_t xo = pgm_read_byte(&glyph->xOffset);
-        const int16_t yo = pgm_read_byte(&glyph->yOffset);
-
-        if (x == tc->_x + xo + cursorx && y == tc->_y + yo + cursory)
-        {
-          // drawChar(cursorx, cursory, c, textcolor, textbgcolor, textsize);
-          const uint8_t* const bitmap = pgm_read_ptr(font.bitmap);
-
-          const uint16_t bo = pgm_read_word(&glyph->bitmapOffset);
-
-          const uint8_t bits = pgm_read_byte(&bitmap[bo + tc->gindex++]);
-          if (bits)
-            data &= ~(1 << tc->cursorx);
-        }
-        ++tc->cursorx;
-        if (tc->cursorx == w)
-        {
-          ++tc->index;
-          tc->cursorx = 0;
-        }
-      }
-    }
-
-    return data;
-  }
-
-private:
-  const int16_t _x, _y;
-  const char* const txt;
-  const GFXfont& font;
-
-  uint16_t gindex;
-  size_t index;
-};
-#else
 template <typename T>
 T modp(const T a, const T b)
 {
@@ -311,7 +223,7 @@ private:
   const Font& fnt;
   const int16_t fontsize;
 };
-#endif
+
 
 /**
  * @brief Draws the contents of a buffer
