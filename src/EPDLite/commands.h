@@ -9,7 +9,15 @@
 #ifndef EPDLITE_COMMANDS_H_INCLUDE
 #define EPDLITE_COMMANDS_H_INCLUDE
 
+#define EPDLITE_CUSTOM_FONT_IMPLEMENTATION
+#ifndef EPDLITE_CUSTOM_FONT_IMPLEMENTATION
+#include "gfxfont.h"
+#include <avr/io.h>
+#include <avr/pgmspace.h>
+#else
 #include "font.h"
+#endif
+
 
 /**
  * @brief Draws a single pixel onto the display
@@ -158,6 +166,7 @@ private:
   const int16_t radius;
 };
 
+#ifndef EPDLITE_CUSTOM_FONT_IMPLEMENTATION
 /**
  * @brief Draws some text
  */
@@ -172,11 +181,12 @@ public:
    * @param text The text to draw
    * @param font The font to use
    */
-  TextCommand(const int16_t x, const int16_t y, const char* const text, const Font& font) :
-  _x(x), _y(y), txt(text), fnt(font)
+  TextCommand(const int16_t x, const int16_t y, const char* const text, const GFXfont& f) :
+  _x(x), _y(y), txt(text), font(f)
   {
-    offx = 0;
-    offy = 0;
+    cursorx = 0;
+    cursory = 0;
+    gindex = 0;
     index = 0;
   }
 
@@ -184,28 +194,124 @@ public:
   {
     TextCommand* tc = (TextCommand*)command;
 
-    if (x == tc->_x + tc->offx && y == tc->_y + tc->offy && tc->index < strlen(tc->txt))
-    {
-      const uint8_t glyph_slice = pgm_read_byte(&(tc->fnt.charmap[tc->txt[tc->index - tc->fnt.mapoffset] + tc->offy % tc->fnt.charwidth]));
+    // we've already written everything
+    if (tc->index >= strlen(tc->txt))
+      return input;
 
-      const uint8_t data = input & ~glyph_slice;
-      ++tc->offy;
-      if (tc->offy % tc->fnt.charwidth == 0)
-        ++tc->index;
-      return data;
+    uint8_t data = input;
+    const char c = tc->txt[tc->index];
+    const GFXfont& font = tc->font;
+
+    const char first = pgm_read_byte(&(font.first));
+    const char last = pgm_read_byte(&(font.last));
+    if (c >= first && c <= last)
+    {
+      const uint8_t c2 = c - first;
+      GFXglyph* glyph = &(((GFXglyph*)pgm_read_ptr(&(font.glyph)))[c2]);
+      const uint8_t w = pgm_read_byte(&glyph->width);
+      const uint8_t h = pgm_read_byte(&glyph->height);
+
+      if (w > 0 && h > 0)
+      {
+        const int16_t xo = pgm_read_byte(&glyph->xOffset);
+        const int16_t yo = pgm_read_byte(&glyph->yOffset);
+
+        if (x == tc->_x + xo + cursorx && y == tc->_y + yo + cursory)
+        {
+          // drawChar(cursorx, cursory, c, textcolor, textbgcolor, textsize);
+          const uint8_t* const bitmap = pgm_read_ptr(font.bitmap);
+
+          const uint16_t bo = pgm_read_word(&glyph->bitmapOffset);
+
+          const uint8_t bits = pgm_read_byte(&bitmap[bo + tc->gindex++]);
+          if (bits)
+            data &= ~(1 << tc->cursorx);
+        }
+        ++tc->cursorx;
+        if (tc->cursorx == w)
+        {
+          ++tc->index;
+          tc->cursorx = 0;
+        }
+      }
     }
 
+    return data;
+  }
+
+private:
+  const int16_t _x, _y;
+  const char* const txt;
+  const GFXfont& font;
+
+  uint16_t gindex;
+  size_t index;
+};
+#else
+template <typename T>
+T modp(const T a, const T b)
+{
+  return (((a % b) + b) % b);
+}
+
+/**
+ * @brief Draws some text
+ */
+class TextCommand
+{
+public:
+  /**
+   * @brief Draws some text
+   *
+   * @param x X position of the start of the text
+   * @param y Y position of the start of the text
+   * @param text The text to draw
+   * @param font The font to use
+   */
+  TextCommand(const int16_t x, const int16_t y, const char* const text, const Font& font, int16_t size) :
+  _x(x), _y(y), txt(text), length(strlen(text)), fnt(font), fontsize(size)
+  {
+  }
+
+  static uint8_t process(void* command, const uint8_t input, const int16_t x, const int16_t y)
+  {
+    TextCommand* tc = (TextCommand*)command;
+    const char* const text = tc->txt;
+    const Font& font = tc->fnt;
+
+    // out of x-bounds
+    if (x < tc->_x || x >= tc->_x + (font.charwidth + 1) * tc->fontsize * tc->length)
+      return input;
+
+    // out of y-bounds
+    if (y < tc->_y || y >= tc->_y + font.charheight * tc->fontsize)
+      return input;
+
+    // 1px letter spacing
+    if (((x - tc->_x) / tc->fontsize + 1) % (font.charwidth + 1) == 0)
+      return input;
+
+    const int16_t index = (x - tc->_x) / ((font.charwidth + 1) * tc->fontsize);
+    if (index >= tc->length)
+      return input;
+
+    const char c = text[index];
+
+    const uint8_t glyph_slice = pgm_read_byte(&(font.charmap[(c - font.mapoffset) * font.charwidth + modp((x - tc->_x) / tc->fontsize, font.charwidth + 1)]));
+
+    if ((glyph_slice >> ((y - tc->_y) / tc->fontsize)) & 1)
+      return input & ~(1 << (7 - x % 8));
     return input;
   }
 
 private:
   const int16_t _x, _y;
   const char* const txt;
+  const int16_t length;
   const Font& fnt;
-
-  int16_t offx, offy;
-  size_t index;
+  const int16_t fontsize;
 };
+#endif
 
 /**
  * @brief Draws the contents of a buffer
