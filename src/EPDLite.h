@@ -40,7 +40,7 @@ public:
    */
   virtual void pop() = 0;
 
-  virtual uint8_t process(const size_t at, const uint8_t input, const int16_t x, const int16_t y) = 0;
+  virtual uint8_t process(const size_t at, const uint8_t input, const int16_t x, const int16_t y, const uint8_t orientation) = 0;
 
   /**
    * @brief The maximum amount of memory used for a single command.
@@ -141,14 +141,14 @@ public:
    * @param y The y position of the pixel data
    * @return The modified 8 pixels
    */
-  virtual uint8_t process(const size_t at, const uint8_t input, const int16_t x, const int16_t y) override
+  virtual uint8_t process(const size_t at, const uint8_t input, const int16_t x, const int16_t y, const uint8_t orientation) override
   {
-    return (call_table[at])((void*)&commands[at * TCommandSize], input, x, y);
+    return (call_table[at])((void*)&commands[at * TCommandSize], input, x, y, orientation);
   }
 
 
 private:
-  uint8_t (*call_table[TCommandCount])(void* command, const uint8_t input, const int16_t x, const int16_t y);
+  uint8_t (*call_table[TCommandCount])(void* command, const uint8_t input, const int16_t x, const int16_t y, const uint8_t orientation);
 
   uint8_t commands[TCommandCount * TCommandSize];
   size_t count;
@@ -174,9 +174,13 @@ public:
    * @param busy Busy pin
    * @param reset Reset pin
    */
-  EPDLite(const int16_t w, const int16_t h, const pin_t cs, const pin_t dc, const pin_t busy, const pin_t reset) :
-  width(w), height(h), pin_cs(cs), pin_dc(dc), pin_busy(busy), pin_reset(reset), settings(SPISettings(2000000, MSBFIRST, SPI_MODE0))
-  {}
+  EPDLite(const int16_t w, const int16_t h, const pin_t cs, const pin_t dc, const pin_t busy, const pin_t reset);
+
+
+  void setOrientation(const uint8_t orientation)
+  {
+    this->orientation = orientation;
+  }
 
   /**
    * @brief Initializes the display
@@ -188,6 +192,15 @@ public:
    * @details Performs a hard reset (using the reset pin) and then a soft reset.
    */
   void reset();
+
+  /**
+   * @brief Loads a waveform
+   * @details ePaper displays sometimes require a waveform so that they can be controlled properly to show the right screen contents. Waveform data for your display will be specific to the manufacturing batch and can be obtained from the manufacturer
+   *
+   * @param waveform the waveform to load
+   * @param len the length of the waveform
+   */
+  void loadLUT(uint8_t* waveform, size_t len);
 
   /**
    * @brief Render to the display from the command buffer
@@ -270,6 +283,7 @@ private:
   const pin_t pin_reset;
 
   const SPISettings settings;
+  uint8_t orientation;
 
   const uint8_t DATA_ENTRY_ORDER = 0x11;
 

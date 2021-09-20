@@ -28,7 +28,7 @@ public:
   PixelCommand(const int16_t x, const int16_t y) :
   _x(x), _y(y) {}
 
-  static uint8_t process(void* command, const uint8_t input, const int16_t x, const int16_t y)
+  static uint8_t process(void* command, const uint8_t input, const int16_t x, const int16_t y, const uint8_t orientation)
   {
     PixelCommand* pc = (PixelCommand*)command;
 
@@ -61,7 +61,7 @@ public:
   LineCommand(const int16_t x0, const int16_t y0, const int16_t x1, const int16_t y1) :
   _x0(x0), _y0(y0), _x1(x1), _y1(y1) {}
 
-  static uint8_t process(void* command, const uint8_t input, const int16_t x, const int16_t y)
+  static uint8_t process(void* command, const uint8_t input, const int16_t x, const int16_t y, const uint8_t orientation)
   {
     LineCommand* lc = (LineCommand*)command;
     // horizontal line
@@ -113,13 +113,13 @@ public:
     LineCommand(x, y, x, y+height)
   } {}
 
-  static uint8_t process(void* command, const uint8_t input, const int16_t x, const int16_t y)
+  static uint8_t process(void* command, const uint8_t input, const int16_t x, const int16_t y, const uint8_t orientation)
   {
     RectCommand* rc = (RectCommand*)command;
 
     uint8_t d = input;
     for (uint8_t i = 0; i < 4; ++i)
-      d = LineCommand::process(&(rc->commands[i]), d, x, y);
+      d = LineCommand::process(&(rc->commands[i]), d, x, y, orientation);
     return d;
   }
 
@@ -143,7 +143,7 @@ public:
   CircleCommand(const int16_t x, const int16_t y, const int16_t r) :
   _x(x), _y(y), radius(r) {}
 
-  static uint8_t process(void* command, const uint8_t input, const int16_t x, const int16_t y)
+  static uint8_t process(void* command, const uint8_t input, const int16_t x, const int16_t y, const uint8_t orientation)
   {
     CircleCommand* cc = (CircleCommand*)command;
 
@@ -185,38 +185,88 @@ public:
   {
   }
 
-  static uint8_t process(void* command, const uint8_t input, const int16_t x, const int16_t y)
+  static uint8_t process(void* command, const uint8_t input, const int16_t x, const int16_t y, const uint8_t orientation)
   {
     TextCommand* tc = (TextCommand*)command;
     const char* const text = tc->txt;
     const Font& font = tc->fnt;
 
-    // out of x-bounds
-    if (x < tc->_x || x >= tc->_x + (font.charwidth + 1) * tc->fontsize * tc->length)
+    if (tc->out_of_bounds(x, y, orientation))
       return input;
 
-    // out of y-bounds
-    if (y < tc->_y || y >= tc->_y + font.charheight * tc->fontsize)
-      return input;
-
-    // 1px letter spacing
-    if (((x - tc->_x) / tc->fontsize + 1) % (font.charwidth + 1) == 0)
-      return input;
-
-    const int16_t index = (x - tc->_x) / ((font.charwidth + 1) * tc->fontsize);
+    const int16_t index = (orientation % 2 ? (y - tc->_y) : (x - tc->_x)) / ((font.charwidth + 1) * tc->fontsize);
     if (index >= tc->length)
       return input;
 
     const char c = text[index];
 
-    const uint8_t glyph_slice = pgm_read_byte(&(font.charmap[(c - font.mapoffset) * font.charwidth + modp((x - tc->_x) / tc->fontsize, font.charwidth + 1)]));
-
-    if ((glyph_slice >> ((y - tc->_y) / tc->fontsize)) & 1)
-      return input & ~(1 << (7 - x % 8));
-    return input;
+    return tc->render_char(input, c, x, y, orientation);
   }
 
 private:
+  bool out_of_bounds(const int16_t x, const int16_t y, const uint8_t orientation)
+  {
+    const char* const text = this->txt;
+    const Font& font = this->fnt;
+
+    if (orientation % 2 == 0)
+    {
+      // out of x-bounds
+      if (x < this->_x || x >= this->_x + (font.charwidth + 1) * this->fontsize * this->length)
+        return true;
+
+      // out of y-bounds
+      if (y < this->_y || y > this->_y + font.charheight * this->fontsize)
+        return true;
+
+      // 1px letter spacing
+      if (((x - this->_x) / this->fontsize + 1) % (font.charwidth + 1) == 0)
+        return true;
+    }
+    else if (orientation % 2 == 1)
+    {
+      // out of x-bounds
+      if (x < this->_x || x > this->_x + font.charheight * this->fontsize)
+        return true;
+
+      // out of y-bounds
+      if (y < this->_y || y >= this->_y + ((font.charwidth + 1) * this->fontsize) * this->length)
+        return true;
+
+      // 1px letter spacing
+      if (((y - this->_y) / this->fontsize + 1) % (font.charwidth + 1) == 0)
+        return true;
+    }
+
+    return false;
+  }
+
+  uint8_t render_char(const uint8_t input, const char c, const int16_t x, const int16_t y, const uint8_t orientation)
+  {
+    const char* const text = this->txt;
+    const Font& font = this->fnt;
+
+    const int16_t diff = orientation % 2 ? (y - this->_y) : (x - this->_x);
+    const uint8_t glyph_slice = pgm_read_byte(&(font.charmap[(c - font.mapoffset) * font.charwidth + modp(diff / this->fontsize, font.charwidth + 1)]));
+
+    if (orientation == 0)
+    {
+      if ((glyph_slice >> ((y - this->_y) / this->fontsize)) & 1)
+        return input & ~(1 << (x % 8));
+    }
+    else if (orientation == 1)
+    {
+      if ((glyph_slice << ((x - this->_x) / fontsize)) & 0b10000000)
+        return input & ~(1 << (7 - x % 8));
+    }
+    else if (orientation == 3)
+    {
+      if ((glyph_slice << ((x - this->_x) / fontsize)) & 0b01000000)
+        return input & ~(1 << (x % 8));
+    }
+    return input;
+  }
+
   const int16_t _x, _y;
   const char* const txt;
   const int16_t length;
@@ -244,7 +294,7 @@ public:
   buf(buffer), w(width), mem(progmem)
   {}
 
-  static uint8_t process(void* command, const uint8_t input, const int16_t x, const int16_t y)
+  static uint8_t process(void* command, const uint8_t input, const int16_t x, const int16_t y, const uint8_t orientation)
   {
     BufferCommand* bc = (BufferCommand*)command;
 

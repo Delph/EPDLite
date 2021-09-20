@@ -5,6 +5,18 @@
 
 #include "EPDLite.h"
 
+EPDLite::EPDLite(const int16_t w, const int16_t h, const pin_t cs, const pin_t dc, const pin_t busy, const pin_t reset)
+  : width(w)
+  , height(h)
+  , pin_cs(cs)
+  , pin_dc(dc)
+  , pin_busy(busy)
+  , pin_reset(reset)
+  , settings(SPISettings(2000000/32, MSBFIRST, SPI_MODE0))
+{
+}
+
+
 void EPDLite::init()
 {
   pinMode(pin_reset, OUTPUT);
@@ -67,6 +79,13 @@ void EPDLite::reset()
   block();
 }
 
+void EPDLite::loadLUT(uint8_t* waveform, size_t len)
+{
+  command(0x32);
+
+  data(waveform, len);
+}
+
 void EPDLite::render(CommandBufferInterface& buffer)
 {
   place(0, 0);
@@ -85,7 +104,7 @@ void EPDLite::render(CommandBufferInterface& buffer)
       for (int16_t xi = 0; xi < 8; ++xi)
       {
         for (size_t i = 0; i < buffer.size(); ++i)
-          data = buffer.process(i, data, x + xi, y);
+          data = buffer.process(i, data, x + xi, y, orientation);
       }
       SPI.transfer(data);
     }
