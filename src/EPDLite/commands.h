@@ -32,7 +32,10 @@ public:
   {
     PixelCommand* pc = (PixelCommand*)command;
 
-    if (pc->_x == x && pc->_y == y)
+    const int16_t tx = orientation % 2 ? pc->_y : pc->_x;
+    const int16_t ty = orientation % 2 ? pc->_x : pc->_y;
+
+    if (tx == x && ty == y)
       return input & ~(1 << (7 - (x % 8)));
 
     return input;
@@ -64,22 +67,28 @@ public:
   static uint8_t process(void* command, const uint8_t input, const int16_t x, const int16_t y, const uint8_t orientation)
   {
     LineCommand* lc = (LineCommand*)command;
+
+    const int16_t tx0 = orientation % 2 ? lc->_y0 : lc->_x0;
+    const int16_t ty0 = orientation % 2 ? lc->_x0 : lc->_y0;
+    const int16_t tx1 = orientation % 2 ? lc->_y1 : lc->_x1;
+    const int16_t ty1 = orientation % 2 ? lc->_x1 : lc->_y1;
+
     // horizontal line
-    if (lc->_y0 == lc->_y1 && lc->_y0 == y)
+    if (ty0 == ty1 && ty0 == y)
     {
-      if (x < lc->_x0)
+      if (x < tx0)
         return input;
-      else if (x > lc->_x1)
+      else if (x > tx1)
         return input;
 
       return input & ~(1 << (7 - (x % 8)));
     }
     // vertical line
-    else if (lc->_x0 == lc->_x1 && lc->_x0 == x)
+    else if (tx0 == tx1 && tx0 == x)
     {
-      if (y < lc->_y0)
+      if (y < ty0)
         return input;
-      if (y > lc->_y1)
+      if (y > ty1)
         return input;
 
       return input & ~(1 << (7 - (x % 8)));
@@ -115,6 +124,7 @@ public:
 
   static uint8_t process(void* command, const uint8_t input, const int16_t x, const int16_t y, const uint8_t orientation)
   {
+    (void)orientation;
     RectCommand* rc = (RectCommand*)command;
 
     uint8_t d = input;
@@ -147,8 +157,11 @@ public:
   {
     CircleCommand* cc = (CircleCommand*)command;
 
-    const uint32_t dist = (x - cc->_x) * (x - cc->_x) + (y - cc->_y) * (y - cc->_y);
-    if (cc->radius == static_cast<int16_t>(sqrt(dist) + 0.5))
+    const int16_t tx = orientation % 2 ? cc->_y : cc->_x;
+    const int16_t ty = orientation % 2 ? cc->_x : cc->_y;
+
+    const float dist = static_cast<float>(x - tx) * static_cast<float>(x - tx) + static_cast<float>(y - ty) * static_cast<float>(y - ty);
+    if (cc->radius == floor(sqrt(dist) + 0.5f))
       return input & ~(1 << (7 - (x % 8)));
 
     return input;
