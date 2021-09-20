@@ -191,20 +191,23 @@ public:
     const char* const text = tc->txt;
     const Font& font = tc->fnt;
 
-    if (tc->out_of_bounds(x, y, orientation))
+    const int16_t tx = orientation % 2 ? tc->_y : tc->_x;
+    const int16_t ty = orientation % 2 ? tc->_x : tc->_y;
+
+    if (tc->out_of_bounds(x, y, tx, ty, orientation))
       return input;
 
-    const int16_t index = (orientation % 2 ? (y - tc->_y) : (x - tc->_x)) / ((font.charwidth + 1) * tc->fontsize);
+    const int16_t index = (orientation % 2 ? (y - ty) : (x - tx)) / ((font.charwidth + 1) * tc->fontsize);
     if (index >= tc->length)
       return input;
 
     const char c = text[index];
 
-    return tc->render_char(input, c, x, y, orientation);
+    return tc->render_char(input, c, x, y, tx, ty, orientation);
   }
 
 private:
-  bool out_of_bounds(const int16_t x, const int16_t y, const uint8_t orientation)
+  bool out_of_bounds(const int16_t x, const int16_t y, const int16_t tx, const int16_t ty, const uint8_t orientation)
   {
     const char* const text = this->txt;
     const Font& font = this->fnt;
@@ -212,56 +215,56 @@ private:
     if (orientation % 2 == 0)
     {
       // out of x-bounds
-      if (x < this->_x || x >= this->_x + (font.charwidth + 1) * this->fontsize * this->length)
+      if (x < tx || x >= tx + (font.charwidth + 1) * this->fontsize * this->length)
         return true;
 
       // out of y-bounds
-      if (y < this->_y || y > this->_y + font.charheight * this->fontsize)
+      if (y < ty || y > ty + font.charheight * this->fontsize)
         return true;
 
       // 1px letter spacing
-      if (((x - this->_x) / this->fontsize + 1) % (font.charwidth + 1) == 0)
+      if (((x - tx) / this->fontsize + 1) % (font.charwidth + 1) == 0)
         return true;
     }
     else if (orientation % 2 == 1)
     {
       // out of x-bounds
-      if (x < this->_x || x > this->_x + font.charheight * this->fontsize)
+      if (x < tx || x > tx + font.charheight * this->fontsize)
         return true;
 
       // out of y-bounds
-      if (y < this->_y || y >= this->_y + ((font.charwidth + 1) * this->fontsize) * this->length)
+      if (y < ty || y >= ty + ((font.charwidth + 1) * this->fontsize) * this->length)
         return true;
 
       // 1px letter spacing
-      if (((y - this->_y) / this->fontsize + 1) % (font.charwidth + 1) == 0)
+      if (((y - ty) / this->fontsize + 1) % (font.charwidth + 1) == 0)
         return true;
     }
 
     return false;
   }
 
-  uint8_t render_char(const uint8_t input, const char c, const int16_t x, const int16_t y, const uint8_t orientation)
+  uint8_t render_char(const uint8_t input, const char c, const int16_t x, const int16_t y, const int16_t tx, const int16_t ty, const uint8_t orientation)
   {
     const char* const text = this->txt;
     const Font& font = this->fnt;
 
-    const int16_t diff = orientation % 2 ? (y - this->_y) : (x - this->_x);
+    const int16_t diff = orientation % 2 ? (y - ty) : (x - tx);
     const uint8_t glyph_slice = pgm_read_byte(&(font.charmap[(c - font.mapoffset) * font.charwidth + modp(diff / this->fontsize, font.charwidth + 1)]));
 
     if (orientation == 0)
     {
-      if ((glyph_slice >> ((y - this->_y) / this->fontsize)) & 1)
+      if ((glyph_slice >> ((y - ty) / this->fontsize)) & 1)
         return input & ~(1 << (x % 8));
     }
     else if (orientation == 1)
     {
-      if ((glyph_slice << ((x - this->_x) / fontsize)) & 0b10000000)
+      if ((glyph_slice << ((x - tx) / fontsize)) & 0b10000000)
         return input & ~(1 << (7 - x % 8));
     }
     else if (orientation == 3)
     {
-      if ((glyph_slice << ((x - this->_x) / fontsize)) & 0b01000000)
+      if ((glyph_slice << ((x - tx) / fontsize)) & 0b01000000)
         return input & ~(1 << (x % 8));
     }
     return input;
