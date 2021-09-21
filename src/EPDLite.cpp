@@ -8,6 +8,7 @@
 EPDLite::EPDLite(const int16_t w, const int16_t h, const pin_t cs, const pin_t dc, const pin_t busy, const pin_t reset)
   : width(w)
   , height(h)
+  , orientation(0),
   , pin_cs(cs)
   , pin_dc(dc)
   , pin_busy(busy)
@@ -104,7 +105,7 @@ void EPDLite::render(CommandBufferInterface& buffer)
       for (int16_t xi = 0; xi < 8; ++xi)
       {
         for (size_t i = 0; i < buffer.size(); ++i)
-          data = buffer.process(i, data, x + xi, y, orientation);
+          data = buffer.process(i, data, x + xi, y, *this);
       }
       SPI.transfer(data);
     }

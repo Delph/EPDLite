@@ -34,6 +34,11 @@ struct Font
   , mapoffset(offset)
   {}
 
+  static int16_t width(const char* const text, const Font& font, int16_t fontsize)
+  {
+    return strlen(text) * (font.charwidth + 1) * fontsize;
+  }
+
   const uint8_t* const charmap;
   const int16_t charwidth;
   const int16_t charheight;

@@ -16,6 +16,8 @@
 
 #include "EPDLite/commands.h"
 
+class EPDLite;
+
 /**
  * @brief Public interface to the @see CommandBuffer
  * @details Provides a public interface to the CommandBuffer to allow polymorphic use of CommandBuffer with template values
@@ -40,7 +42,7 @@ public:
    */
   virtual void pop() = 0;
 
-  virtual uint8_t process(const size_t at, const uint8_t input, const int16_t x, const int16_t y, const uint8_t orientation) = 0;
+  virtual uint8_t process(const size_t at, const uint8_t input, const int16_t x, const int16_t y, const EPDLite& epd) = 0;
 
   /**
    * @brief The maximum amount of memory used for a single command.
@@ -141,14 +143,14 @@ public:
    * @param y The y position of the pixel data
    * @return The modified 8 pixels
    */
-  virtual uint8_t process(const size_t at, const uint8_t input, const int16_t x, const int16_t y, const uint8_t orientation) override
+  virtual uint8_t process(const size_t at, const uint8_t input, const int16_t x, const int16_t y, const EPDLite& epd) override
   {
-    return (call_table[at])((void*)&commands[at * TCommandSize], input, x, y, orientation);
+    return (call_table[at])((void*)&commands[at * TCommandSize], input, x, y, epd);
   }
 
 
 private:
-  uint8_t (*call_table[TCommandCount])(void* command, const uint8_t input, const int16_t x, const int16_t y, const uint8_t orientation);
+  uint8_t (*call_table[TCommandCount])(void* command, const uint8_t input, const int16_t x, const int16_t y, const EPDLite& epd);
 
   uint8_t commands[TCommandCount * TCommandSize];
   size_t count;
@@ -238,6 +240,8 @@ public:
    * @brief The height of the display in pixels
    */
   const int16_t height;
+
+  uint8_t orientation;
 private:
   /**
    * @brief blocks execution until the busy pin indicates the display is read
@@ -283,24 +287,23 @@ private:
   const pin_t pin_reset;
 
   const SPISettings settings;
-  uint8_t orientation;
 
-  const uint8_t DATA_ENTRY_ORDER = 0x11;
+  static const uint8_t DATA_ENTRY_ORDER = 0x11;
 
-  const uint8_t Y_INC_X_INC = 0b11;
-  const uint8_t UPDATE_X = 0b000;
-  const uint8_t UPDATE_Y = 0b100;
+  static const uint8_t Y_INC_X_INC = 0b11;
+  static const uint8_t UPDATE_X = 0b000;
+  static const uint8_t UPDATE_Y = 0b100;
 
-  const uint8_t SOFT_RESET = 0x12;
+  static const uint8_t SOFT_RESET = 0x12;
 
-  const uint8_t WRITE_RAM = 0x24;
+  static const uint8_t WRITE_RAM = 0x24;
 
-  const uint8_t SET_X_SIZE = 0x44;
-  const uint8_t SET_Y_SIZE = 0x45;
-  const uint8_t SET_X_ADDRESS = 0x4E;
-  const uint8_t SET_Y_ADDRESS = 0x4F;
-  const uint8_t DISPLAY_UPDATE_CONTROL = 0x21;
-  const uint8_t DISPLAY_UPDATE_SEQUENCE = 0x20;
+  static const uint8_t SET_X_SIZE = 0x44;
+  static const uint8_t SET_Y_SIZE = 0x45;
+  static const uint8_t SET_X_ADDRESS = 0x4E;
+  static const uint8_t SET_Y_ADDRESS = 0x4F;
+  static const uint8_t DISPLAY_UPDATE_CONTROL = 0x21;
+  static const uint8_t DISPLAY_UPDATE_SEQUENCE = 0x20;
 };
 
 #endif
