@@ -16,7 +16,6 @@
 
 #include "EPDLite/commands.h"
 
-class EPDLite;
 
 /**
  * @brief Public interface to the @see CommandBuffer
@@ -179,10 +178,8 @@ public:
   EPDLite(const int16_t w, const int16_t h, const pin_t cs, const pin_t dc, const pin_t busy, const pin_t reset);
 
 
-  void setOrientation(const uint8_t orientation)
-  {
-    this->orientation = orientation;
-  }
+  void setOrientation(const uint8_t o);
+  uint8_t getOrientation() const { return orientation; };
 
   /**
    * @brief Initializes the display
@@ -241,7 +238,6 @@ public:
    */
   const int16_t height;
 
-  uint8_t orientation;
 private:
   /**
    * @brief blocks execution until the busy pin indicates the display is read
@@ -288,9 +284,12 @@ private:
 
   const SPISettings settings;
 
+  uint8_t orientation;
+
   static const uint8_t DATA_ENTRY_ORDER = 0x11;
 
-  static const uint8_t Y_INC_X_INC = 0b11;
+  static const uint8_t Y_INC = 0b10;
+  static const uint8_t X_INC = 0b01;
   static const uint8_t UPDATE_X = 0b000;
   static const uint8_t UPDATE_Y = 0b100;
 

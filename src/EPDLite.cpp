@@ -8,12 +8,12 @@
 EPDLite::EPDLite(const int16_t w, const int16_t h, const pin_t cs, const pin_t dc, const pin_t busy, const pin_t reset)
   : width(w)
   , height(h)
-  , orientation(0),
   , pin_cs(cs)
   , pin_dc(dc)
   , pin_busy(busy)
   , pin_reset(reset)
   , settings(SPISettings(2000000/32, MSBFIRST, SPI_MODE0))
+  , orientation(0)
 {
 }
 
@@ -35,7 +35,7 @@ void EPDLite::init()
 
   // define the data entry sequence
   command(DATA_ENTRY_ORDER);
-  data(Y_INC_X_INC);
+  data(Y_INC | X_INC);
 
   // set the display size
   command(SET_X_SIZE);
@@ -87,6 +87,13 @@ void EPDLite::loadLUT(uint8_t* waveform, size_t len)
   data(waveform, len);
 }
 
+void EPDLite::setOrientation(const uint8_t o)
+{
+  this->orientation = o;
+  // command(DATA_ENTRY_ORDER);
+  // data((o % 2 ? 0 : Y_INC) | o / 2 ? 0 : X_INC);
+}
+
 void EPDLite::render(CommandBufferInterface& buffer)
 {
   place(0, 0);
@@ -106,6 +113,7 @@ void EPDLite::render(CommandBufferInterface& buffer)
       {
         for (size_t i = 0; i < buffer.size(); ++i)
           data = buffer.process(i, data, x + xi, y, *this);
+          // data = buffer.process(i, data, x + xi, orientation >= 2 ? height - 1 - y : y, *this);
       }
       SPI.transfer(data);
     }
