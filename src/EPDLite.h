@@ -114,7 +114,7 @@ public:
   template <typename TCommand>
   void push(TCommand command)
   {
-    static_assert(sizeof(TCommand) <= TCommandSize);
+    static_assert(sizeof(TCommand) <= TCommandSize, "Pushed command is bigger. Increase TCommandCount.");
 
     if (count >= TCommandCount)
       return; // need to handle this somehow?
@@ -179,7 +179,7 @@ public:
 
 
   void setOrientation(const uint8_t o);
-  uint8_t getOrientation() const { return orientation; };
+  uint8_t getOrientation() const { return orientation; }
 
   /**
    * @brief Initializes the display
