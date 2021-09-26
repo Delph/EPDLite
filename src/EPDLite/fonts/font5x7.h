@@ -9,8 +9,12 @@
 #ifndef EPDLITE_FONT_5X7_H_INCLUDE
 #define EPDLITE_FONT_5X7_H_INCLUDE
 
+#ifdef TEST
+#include "../../../extra/stub.h"
+#else
 #include <avr/io.h>
 #include <avr/pgmspace.h>
+#endif
 
 #include "../font.h"
 

@@ -1,8 +1,15 @@
 #include "commands.h"
 
+#ifdef TEST
+#include "../../extra/stub.h"
+#else
 #include "EPDLite.h"
+#endif
+
 #include "font.h"
 
+#include <math.h>
+#include <stdlib.h>
 
 int16_t orientate_x(const int16_t x, const int16_t y, const EPDLite& epd)
 {
@@ -139,6 +146,22 @@ uint8_t CircleCommand::process(void* command, const uint8_t input, const int16_t
   return input;
 }
 
+int16_t _index(const int16_t x, const int16_t y, const int16_t tx, const int16_t ty, const EPDLite& epd)
+{
+  switch (epd.getOrientation())
+  {
+    case 0:
+      return x - tx;
+    case 1:
+      return y - ty;
+    case 2:
+      return abs(tx - x);
+    case 3:
+      return abs(ty - y);
+  }
+  return 0;
+}
+
 uint8_t TextCommand::process(void* command, const uint8_t input, const int16_t x, const int16_t y, const EPDLite& epd)
 {
   TextCommand* tc = (TextCommand*)command;
@@ -151,11 +174,13 @@ uint8_t TextCommand::process(void* command, const uint8_t input, const int16_t x
   if (tc->out_of_bounds(x, y, tx, ty, epd))
     return input;
 
-  const int16_t index = (epd.getOrientation() % 2 ? (y - ty) : (x - tx)) / ((font.charwidth + 1) * tc->fontsize);
+  // const int16_t index = (epd.getOrientation() % 2 ? (y - ty) : (x - tx)) / ((font.charwidth + 1) * tc->fontsize);
+  const int16_t index = _index(x, y, tx, ty, epd) / ((font.charwidth + 1) * tc->fontsize);
   if (index >= tc->length)
     return input;
 
   const char c = epd.getOrientation() >= 2 ? text[tc->length - 1 - index] : text[index];
+  // const char c = text[index];
 
   return tc->render_char(input, c, x, y, tx, ty, epd);
 }
@@ -178,21 +203,35 @@ bool TextCommand::out_of_bounds(const int16_t x, const int16_t y, const int16_t 
     if (((x - tx) / this->fontsize + 1) % (font.charwidth + 1) == 0)
       return true;
   }
-  else if (epd.getOrientation() % 2 == 1)
+  else if (epd.getOrientation() == 1)
   {
     // out of x-bounds
     if (x < tx || x > tx + font.charheight * this->fontsize)
       return true;
 
     // out of y-bounds
-    if (y < ty || y >= ty + ((font.charwidth + 1) * this->fontsize) * this->length)
+    if (y < ty || y >= ty + (font.charwidth + 1) * this->fontsize * this->length)
       return true;
 
     // 1px letter spacing
     if (((y - ty) / this->fontsize + 1) % (font.charwidth + 1) == 0)
       return true;
   }
+  else if (epd.getOrientation() == 3)
+  {
+    // out of x-bounds
+    if (x < tx || x > tx + font.charheight * this->fontsize)
+      return true;
 
+    // out of y-bounds
+    if (y > ty || y <= ty - (font.charwidth + 1) * this->fontsize * this->length)
+      return true;
+
+    // 1px letter spacing
+    if (((y - ty) / this->fontsize + 1) % (font.charwidth + 1) == 0)
+      return true;
+
+  }
   return false;
 }
 
@@ -235,6 +274,6 @@ uint8_t BufferCommand::process(void* command, const uint8_t input, const int16_t
   (void)input;
 
   if (bc->mem)
-    return pgm_read_byte(bc->buf[y * (bc->w / 8) + x / 8]);
+    return pgm_read_byte(&(bc->buf[y * (bc->w / 8) + x / 8]));
   return bc->buf[y * (bc->w / 8) + x / 8];
 }
