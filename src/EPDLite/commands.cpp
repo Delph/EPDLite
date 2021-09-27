@@ -173,14 +173,14 @@ uint8_t TextCommand::process(void* command, const uint8_t input, const int16_t x
 
   if (tc->out_of_bounds(x, y, tx, ty, epd))
     return input;
+  // return input & ~(1 << (7- x % 8));
 
-  // const int16_t index = (epd.getOrientation() % 2 ? (y - ty) : (x - tx)) / ((font.charwidth + 1) * tc->fontsize);
-  const int16_t index = _index(x, y, tx, ty, epd) / ((font.charwidth + 1) * tc->fontsize);
+  const int16_t offset = epd.getOrientation() >= 2 ? (font.charwidth + 1) * tc->fontsize * tc->length : 0;
+  const int16_t index = _index(x, y, tx - offset, ty - offset, epd) / ((font.charwidth + 1) * tc->fontsize);
   if (index >= tc->length)
     return input;
 
   const char c = epd.getOrientation() >= 2 ? text[tc->length - 1 - index] : text[index];
-  // const char c = text[index];
 
   return tc->render_char(input, c, x, y, tx, ty, epd);
 }
@@ -189,7 +189,7 @@ bool TextCommand::out_of_bounds(const int16_t x, const int16_t y, const int16_t 
 {
   const Font& font = this->fnt;
 
-  if (epd.getOrientation() % 2 == 0)
+  if (epd.getOrientation() == 0)
   {
     // out of x-bounds
     if (x < tx || x >= tx + (font.charwidth + 1) * this->fontsize * this->length)
@@ -217,6 +217,20 @@ bool TextCommand::out_of_bounds(const int16_t x, const int16_t y, const int16_t 
     if (((y - ty) / this->fontsize + 1) % (font.charwidth + 1) == 0)
       return true;
   }
+  if (epd.getOrientation() == 2)
+  {
+    // out of x-bounds
+    if (x < tx - (font.charwidth + 1) * this->fontsize * this->length || x >= tx)
+      return true;
+
+    // out of y-bounds
+    if (y < ty || y > ty + font.charheight * this->fontsize)
+      return true;
+
+    // 1px letter spacing
+    if (((x - tx) / this->fontsize + 1) % (font.charwidth + 1) == 0)
+      return true;
+  }
   else if (epd.getOrientation() == 3)
   {
     // out of x-bounds
@@ -224,7 +238,7 @@ bool TextCommand::out_of_bounds(const int16_t x, const int16_t y, const int16_t 
       return true;
 
     // out of y-bounds
-    if (y > ty || y <= ty - (font.charwidth + 1) * this->fontsize * this->length)
+    if (y < ty - (font.charwidth + 1) * this->fontsize * this->length || y >= ty)
       return true;
 
     // 1px letter spacing
@@ -240,12 +254,12 @@ uint8_t TextCommand::render_char(const uint8_t input, const char c, const int16_
   const Font& font = this->fnt;
 
   const int16_t diff = epd.getOrientation() % 2 ? (y - ty) : (x - tx);
-  const int16_t d = abs((epd.getOrientation() > 2 ? font.charwidth - 1 : 0) - modp(diff / this->fontsize, font.charwidth + 1));
+  const int16_t d = abs((epd.getOrientation() >= 2 ? font.charwidth - 1 : 0) - modp(diff / this->fontsize, font.charwidth + 1));
   const uint8_t glyph_slice = pgm_read_byte(&(font.charmap[(c - font.mapoffset) * font.charwidth + d]));
 
   if (epd.getOrientation() == 0)
   {
-    if ((glyph_slice >> ((y - ty) / this->fontsize)) & 1)
+    if ((glyph_slice >> ((y - ty) / fontsize)) & 1)
       return input & ~(1 << (7 - x % 8));
   }
   else if (epd.getOrientation() == 1)
@@ -255,12 +269,12 @@ uint8_t TextCommand::render_char(const uint8_t input, const char c, const int16_
   }
   else if (epd.getOrientation() == 2)
   {
-    if ((glyph_slice << ((y - ty) / this->fontsize)) & 0b10000000)
+    if ((glyph_slice << ((y - ty) / fontsize)) & 0b10000000)
       return input & ~(1 << (7 - x % 8));
   }
   else if (epd.getOrientation() == 3)
   {
-    if ((glyph_slice >>((x - tx) / fontsize)) & 1)
+    if ((glyph_slice >> ((x - tx) / fontsize)) & 1)
       return input & ~(1 << (7 - x % 8));
   }
   return input;
