@@ -3,7 +3,7 @@ main.o \
 ../src/EPDLite/commands.o
 
 CPPFLAGS = -DTEST
-CXXFLAGS = -Wall -Wextra -Werror -std=c++11
+CXXFLAGS = -Wall -Wextra -Werror -std=c++11 -g
 LDFLAGS = 
 OBJECTS = $(MAIN)
 
