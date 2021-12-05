@@ -199,9 +199,16 @@ void EPDLite::block()
 {
   do
   {
-    delay(20);
+    delay(10);
   } while (digitalRead(pin_busy));
-  delay(20);
+  delay(10);
+}
+
+void EPDLite::preblock()
+{
+  while (digitalRead(pin_busy))
+    delay(10);
+  delay(10);
 }
 
 void EPDLite::place(const int16_t x, const int16_t y)

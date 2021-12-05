@@ -240,9 +240,15 @@ public:
 
 private:
   /**
-   * @brief blocks execution until the busy pin indicates the display is read
+   * @brief blocks execution until the busy pin indicates the display is ready
    */
   void block();
+
+  /**
+   * @brief blocks execution until the busy pin indicates the display is ready
+   * checks pin state before blocking
+   */
+  void preblock();
 
   /**
    * @brief sets the display's ram address pointer
