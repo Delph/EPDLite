@@ -99,9 +99,9 @@ uint8_t RectCommand::process(void* command, const uint8_t input, const int16_t x
 
   if (rc->f)
   {
-    if (x < tx || x > tx + rc->_w)
+    if (x < tx || x > tx + (epd.getOrientation() % 2 ? rc->_h : rc->_w))
       return input;
-    if (y < ty || y > ty + rc->_h)
+    if (y < ty || y > ty + (epd.getOrientation() % 2 ? rc->_w : rc->_h))
       return input;
 
     return input & ~(1 << (7 - (x % 8)));
