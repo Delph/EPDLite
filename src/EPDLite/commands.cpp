@@ -206,7 +206,7 @@ bool TextCommand::out_of_bounds(const int16_t x, const int16_t y, const int16_t 
   else if (epd.getOrientation() == 1)
   {
     // out of x-bounds
-    if (x < tx || x > tx + font.charheight * this->fontsize)
+    if (x < tx || x > tx + (font.charheight + 1) * this->fontsize)
       return true;
 
     // out of y-bounds
