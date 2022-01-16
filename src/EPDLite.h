@@ -205,24 +205,37 @@ public:
    * @brief Render to the display from the command buffer
    *
    * @param buffer Renders the commands listed into the buffer onto a blank screen.
+   * @param doBlock Blocks until the render is complete, if false call `wait` before sending any commands to the display again.
    */
-  void render(CommandBufferInterface& buffer);
+  void render(CommandBufferInterface& buffer, const bool doBlock = true);
 
   /**
    * @brief Render to the display the raw data from the buffer
    * @details Rendering using a full memory buffer, similar to other libraries. The buffer must be big enough to hold the entire screen contents.
    *
    * @param buffer The buffer must be at least `height * width / 8` bytes. UB if it's not.
+   * @param doBlock Blocks until the render is complete, if false call `wait` before sending any commands to the display again.
    */
-  void render(const uint8_t* const buffer);
+  void render(const uint8_t* const buffer, const bool doBlock = true);
 
   /**
    * @brief Render to the display from a buffer storee in PROGMEM
    * @details Rendering using a full memory buffer from flash. The buffer must be big enough to store an entire image.
    *
    * @param buffer The buffer in PROGMEM
+   * @param doBlock Blocks until the render is complete, if false call `wait` before sending any commands to the display again.
    */
-  void render_P(const uint8_t* const buffer);
+  void render_P(const uint8_t* const buffer, const bool doBlock = true);
+
+  /**
+   * @brief Waits until the display's busy line is low
+   */
+  inline void wait() { preblock(); }
+
+  /**
+   * @brief Returns true if the display's busy line is low
+   */
+  inline bool ready() { return !digitalRead(pin_busy); }
 
   /**
    * @brief Blanks the display

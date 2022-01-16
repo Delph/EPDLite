@@ -94,7 +94,7 @@ void EPDLite::setOrientation(const uint8_t o)
   // data((o % 2 ? 0 : Y_INC) | o / 2 ? 0 : X_INC);
 }
 
-void EPDLite::render(CommandBufferInterface& buffer)
+void EPDLite::render(CommandBufferInterface& buffer, const bool doBlock)
 {
   place(0, 0);
 
@@ -123,10 +123,12 @@ void EPDLite::render(CommandBufferInterface& buffer)
   SPI.endTransaction();
 
   command(DISPLAY_UPDATE_SEQUENCE);
-  block();
+
+  if (doBlock)
+    block();
 }
 
-void EPDLite::render(const uint8_t* const buffer)
+void EPDLite::render(const uint8_t* const buffer, const bool doBlock)
 {
   place(0, 0);
 
@@ -146,10 +148,12 @@ void EPDLite::render(const uint8_t* const buffer)
   SPI.endTransaction();
 
   command(DISPLAY_UPDATE_SEQUENCE);
-  block();
+
+  if (doBlock)
+    block();
 }
 
-void EPDLite::render_P(const uint8_t* const buffer)
+void EPDLite::render_P(const uint8_t* const buffer, const bool doBlock)
 {
   place(0, 0);
 
@@ -169,7 +173,9 @@ void EPDLite::render_P(const uint8_t* const buffer)
   SPI.endTransaction();
 
   command(DISPLAY_UPDATE_SEQUENCE);
-  block();
+
+  if (doBlock)
+    block();
 }
 
 void EPDLite::clear()
